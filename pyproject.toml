@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "geass"
 version = "0.1.0"
-description = "Command your audio transcriptions with Geass"
+description = "Command your audio transcriptions API with Geass"
 authors = ["Kabilan108 <tonykabilanokeke@gmail.com>"]
 
 [tool.poetry.dependencies]
