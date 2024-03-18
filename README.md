@@ -43,13 +43,15 @@ poetry install --with dev
 python -m modal setup
 ```
 
-4. [Create a secret](https://modal.com/docs/guide/secrets) in your modal account called `geass-secrets`.
+4. [Create a secret](https://modal.com/docs/guide/secrets) in your modal account called `geass-secrets`. Take a look at [.env.template](.env.template) to see what secrets need to be defined. Use the [generate-token.sh](scripts/generate_token.sh) script to generate a value for `GEASS_SERVICE_TOKEN`.
 
 5. Deploy the transcription service:
 
 ```shell
 modal deploy geass.service.main
 ```
+
+Once the service is running, set `GEASS_SERVICE_API_URL` to the fast api URL. This and `GEASS_SERVICE_TOKEN` should be set in your local environment.
 
 6. Install the Geass CLI:
 
