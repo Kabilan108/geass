@@ -1,6 +1,7 @@
 # Author: Tony K. Okeke
 # Date:   03.17.2024
 
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 import typer
@@ -15,6 +16,7 @@ from geass.cli import models, utils
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 config = models.Settings()
+console = Console()
 
 
 @app.command("video-to-audio", help="Convert a video file to an audio file")
@@ -137,6 +139,7 @@ def get_transcript(
     job_id: int,
     format: models.TranscriptFormat = models.TranscriptFormat.TEXT,
     retry: bool = False,
+    sleep: int = 5,
 ):
     try:
         job = config.job_logger.get_job(job_id)
@@ -145,20 +148,20 @@ def get_transcript(
         return
 
     if job.transcript is None:
-        while True:
-            try:
-                typer.echo("Querying job status")
-                job = utils.get_job_status(job, config)
-            except ValueError:
-                typer.secho("Error getting job status", fg="red")
-                return
+        with console.status("[blue]Fetching transcript[/blue]"):
+            while True:
+                try:
+                    job = utils.get_job_status(job, config)
+                except ValueError:
+                    typer.secho("Error getting job status", fg="red")
+                    return
 
-            if job.status == "complete":
-                break
-            if not retry:
-                break
-            typer.echo("Waiting for job to complete")
-            time.sleep(5)
+                if job.status == "complete":
+                    break
+                if not retry:
+                    break
+                console.print("Waiting for job to complete")
+                time.sleep(sleep)
 
     transcript = job.transcript
     assert transcript is not None
