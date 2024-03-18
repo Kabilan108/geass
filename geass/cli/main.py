@@ -6,7 +6,6 @@ from rich.panel import Panel
 from rich.table import Table
 import typer
 import httpx
-import rich
 
 from typing import Optional
 from pathlib import Path
@@ -17,6 +16,7 @@ from geass.cli import models, utils
 app = typer.Typer(pretty_exceptions_show_locals=False)
 config = models.Settings()
 console = Console()
+error_console = Console(stderr=True)
 
 
 @app.command("video-to-audio", help="Convert a video file to an audio file")
@@ -80,10 +80,13 @@ def transcribe(audio_paths: list[Path], num_threads: int = 4):
                     call_id=response.json()["call_id"],
                     status="running",
                 )
-                config.job_logger.save_job(job)
+                id = config.job_logger.save_job(job)
+                console.print(f"Job {id:03d} started <[cyan]{job.call_id}[/cyan]>")
             else:
-                typer.secho("Error from services API", fg="red")
-                typer.secho(response.json(), fg="red")
+                error_console.print(
+                    "[red bold]Error:[/red bold] services API call failed"
+                )
+                error_console.print(response.json())
 
 
 @app.command("list-jobs", help="List all transcription jobs")
@@ -100,13 +103,13 @@ def list_jobs(status: str = None, limit: int = 10, refresh: bool = False):
 
         status_text = utils.status_text(job.status)
         table.add_row(
-            f"[bold cyan]{job.id}[/bold cyan]",
+            f"[bold cyan]{job.id:03d}[/bold cyan]",
             job.name,
             status_text,
             job.start_time.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-    rich.print(
+    console.print(
         Panel(
             table,
             title="[bold]Jobs[/bold]",
@@ -123,11 +126,11 @@ def check_status(job_id: int):
         try:
             job = utils.get_job_status(job, config)
         except ValueError as e:
-            typer.secho(str(e), fg="red")
+            error_console.print(f"[red]{e}[/red]")
             return
 
     status_text = utils.status_text(job.status)
-    rich.print(
+    console.print(
         f"[bold blue]Job {job_id}[/bold blue] ([blue]{job.name}[/blue]) is {status_text}"
     )
 
@@ -144,7 +147,7 @@ def get_transcript(
     try:
         job = config.job_logger.get_job(job_id)
     except ValueError as e:
-        typer.secho(str(e), fg="red")
+        error_console.print(f"[red]{e}[/red]")
         return
 
     if job.transcript is None:
@@ -153,7 +156,7 @@ def get_transcript(
                 try:
                     job = utils.get_job_status(job, config)
                 except ValueError:
-                    typer.secho("Error getting job status", fg="red")
+                    error_console.print("[red]Error getting job status[/red]")
                     return
 
                 if job.status == "complete":
