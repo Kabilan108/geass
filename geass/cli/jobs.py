@@ -32,15 +32,18 @@ class JobLogger:
                 """
             )
 
-    def save_job(self, job: Job):
+    def save_job(self, job: Job) -> int:
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute(
+            cursor = conn.cursor()
+            cursor.execute(
                 """
                 INSERT INTO jobs (name, file, call_id, status)
                 VALUES (?, ?, ?, ?)
-            """,
+                """,
                 (job.name, str(job.file), job.call_id, job.status),
             )
+            conn.commit()
+            return cursor.lastrowid
 
     def update_job(self, job: Job):
         with sqlite3.connect(self.db_path) as conn:
