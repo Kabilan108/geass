@@ -11,7 +11,6 @@ from rich.progress import (
 import ffmpeg
 import httpx
 
-from time import gmtime, strftime
 from typing import Generator
 from pathlib import Path
 import os
@@ -23,10 +22,6 @@ CONFIG_FILE = Path("~/.geass.json").expanduser()
 
 def ffmpeg_convert(input_path: str, output_path: str):
     ffmpeg.input(input_path).output(output_path).run()
-
-
-def to_timestamp(seconds: int) -> str:
-    return strftime("%H:%M:%S", gmtime(seconds))
 
 
 def status_text(status: str) -> str:
@@ -44,17 +39,10 @@ def get_job_status(job: models.Job, config: models.Settings) -> models.Job:
     if response.status_code == 200:
         job.status = response.json()["status"]
         if job.status == "complete":
-            # TODO: update this with new response schema
+            transcript = response.json()["transcript"]
             job.transcript = models.Transcript(
-                text=response.json()["transcript"],
-                timestamps=[
-                    models.TimeStamp(
-                        start=to_timestamp(c["start"]),
-                        end=to_timestamp(c["end"]),
-                        text=c["text"],
-                    )
-                    for c in response.json()["timestamps"]
-                ],
+                text=transcript["text"],
+                timestamps=[models.TimeStamp(**c) for c in transcript["timestamps"]],
             )
         config.job_logger.update_job(job)
     else:
