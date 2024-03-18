@@ -7,6 +7,10 @@ name = "geass"
 version = "0.1.0"
 description = "Command your audio transcriptions API with Geass"
 authors = ["Kabilan108 <tonykabilanokeke@gmail.com>"]
+packages = [
+    { include = "geass", from = "." },
+]
+exclude = ["geass/service"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
