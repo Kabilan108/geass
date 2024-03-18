@@ -20,8 +20,8 @@ from . import models
 CONFIG_FILE = Path("~/.geass.json").expanduser()
 
 
-def ffmpeg_convert(input_path: str, output_path: str):
-    ffmpeg.input(input_path).output(output_path).run()
+def ffmpeg_convert(input_path: Path, output_path: Path):
+    ffmpeg.input(str(input_path)).output(str(output_path)).run()
 
 
 def status_text(status: str) -> str:
