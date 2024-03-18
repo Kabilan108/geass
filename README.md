@@ -7,9 +7,9 @@
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue?style=for-the-badge&logo=python)
 ![wakapi.dev](https://img.shields.io/badge/wakapi.dev-8%20hrs%2006%20mins-168014?style=for-the-badge&logo=wakatime)
 
-Welcome to Geass, the ultimate tool for transcribing your audio files with ease. Just like how Lelouch commands others with his Geass, you can now command your audio transcriptions with this powerful CLI and serverless API. Let's embark on this journey together and make transcribing audio as smooth as Lelouch's plans!
-
 ![geass demo](demo.gif)
+
+Welcome to Geass, the ultimate tool for transcribing your audio files with ease. Just like how Lelouch commands others with his Geass, you can now command your audio transcriptions with this powerful CLI and serverless API. Let's embark on this journey together and make transcribing audio as smooth as Lelouch's plans!
 
 ## Features
 
