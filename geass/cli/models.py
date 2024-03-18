@@ -57,8 +57,8 @@ class Job(BaseModel):
 
 
 class Settings(BaseSettings):
-    GEASS_SERVICES_API_URL: str
-    GEASS_SERVICES_API_KEY: str
+    GEASS_SERVICE_API_URL: str
+    GEASS_SERVICE_TOKEN: str
 
     @computed_field
     def db_path(self) -> Path:
@@ -67,15 +67,15 @@ class Settings(BaseSettings):
 
     @computed_field
     def service_status_url(self) -> str:
-        return f"{self.GEASS_SERVICES_API_URL}/status"
+        return f"{self.GEASS_SERVICE_API_URL}/status"
 
     @computed_field
     def transcribe_service_url(self) -> str:
-        return f"{self.GEASS_SERVICES_API_URL}/transcribe"
+        return f"{self.GEASS_SERVICE_API_URL}/transcribe"
 
     @computed_field
     def service_headers(self) -> dict:
-        return {"Authorization": f"Bearer {self.GEASS_SERVICES_API_KEY}"}
+        return {"Authorization": f"Bearer {self.GEASS_SERVICE_TOKEN}"}
 
     @computed_field
     def job_logger(self) -> Any:
