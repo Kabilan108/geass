@@ -9,6 +9,8 @@
 
 Welcome to Geass, the ultimate tool for transcribing your audio files with ease. Just like how Lelouch commands others with his Geass, you can now command your audio transcriptions with this powerful CLI and serverless API. Let's embark on this journey together and make transcribing audio as smooth as Lelouch's plans!
 
+[![asciicast](https://asciinema.org/a/Lo1QaWPaYPDnbyFlIAxeueryS.svg)](https://asciinema.org/a/Lo1QaWPaYPDnbyFlIAxeueryS)
+
 ## Features
 
 - Convert video files to audio format
