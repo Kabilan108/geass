@@ -81,7 +81,7 @@ async def poll_status(call_id: str):
     function_call = FunctionCall.from_id(call_id)
 
     try:
-        transcript = function_call.get(timeout=0.1)
+        res = function_call.get(timeout=0.1)
     except TimeoutError:
         return {"status": "running"}
     except Exception as exc:
@@ -98,10 +98,10 @@ async def poll_status(call_id: str):
             detail="Unknown error processing job",
         )
 
-    logger.info(f"Received segments for {call_id}")
-    logger.info(f"Segments: {transcript['text']}")
+    logger.info(f"Completed transcription for {call_id}")
 
     return {
         "status": "complete",
-        "transcript": transcript,
+        "transcript": res["transcript"],
+        "time_taken": res["time_taken"],
     }

@@ -12,6 +12,8 @@ from modal import (
     gpu,
 )
 
+import time
+
 from . import config, utils
 
 GPU_CONFIG = gpu.T4()
@@ -79,9 +81,13 @@ def transcribe(audiofile: str) -> dict:
     logger.info(f"Starting transcription job for {audiofile}")
 
     pipeline = utils.load_whisper_pipeline()
+    start_time = time.time()
     segments = utils.transcribe(pipeline, audiofile)
+    end_time = time.time()
 
-    logger.info(f"Finished transcription job for {audiofile}")
+    logger.info(
+        f"Finished transcription job for {audiofile} in {end_time - start_time} seconds"
+    )
 
     for i, chk in enumerate(segments["chunks"]):
         segments["chunks"][i] = {
@@ -90,7 +96,13 @@ def transcribe(audiofile: str) -> dict:
             "text": chk["text"],
         }
 
-    return {"text": segments["text"], "timestamps": segments["chunks"]}
+    return {
+        "transcript": {
+            "text": segments["text"],
+            "timestamps": segments["chunks"],
+        },
+        "time_taken": end_time - start_time,
+    }
 
 
 @stub.function(

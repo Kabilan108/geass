@@ -96,17 +96,26 @@ def list_jobs(status: str = None, limit: int = 10, refresh: bool = False):
     table.add_column("Name", justify="left")
     table.add_column("Status", justify="center")
     table.add_column("Submitted", justify="center")
+    table.add_column("Time Taken", justify="center")
 
     for job in config.job_logger.get_jobs(status=status, limit=limit):
         if refresh and job.status == "running":
             job = utils.get_job_status(job, config)
 
         status_text = utils.status_text(job.status)
+        if job.transcript is not None and job.transcript.time_taken is not None:
+            time_taken = (
+                f"{time.strftime('%H:%M:%S', time.gmtime(job.transcript.time_taken))}"
+            )
+        else:
+            time_taken = "N/A"
+
         table.add_row(
             f"[bold cyan]{job.id:03d}[/bold cyan]",
             job.name,
             status_text,
             job.start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            time_taken,
         )
 
     console.print(

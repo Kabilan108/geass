@@ -27,7 +27,8 @@ class JobLogger:
                     call_id TEXT NOT NULL,
                     status TEXT NOT NULL,
                     start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    transcript TEXT
+                    transcript TEXT,
+                    time_taken REAL
                 )
                 """
             )

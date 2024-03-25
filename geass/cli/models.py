@@ -4,7 +4,7 @@
 from pydantic import BaseModel, RootModel, computed_field, validator
 from pydantic_settings import BaseSettings
 
-from typing import Any, Generator, Optional
+from typing import Any, Generator, NamedTuple, Optional
 from datetime import datetime
 from pathlib import Path
 from enum import Enum
@@ -40,6 +40,7 @@ class TimeStamps(RootModel):
 class Transcript(BaseModel):
     text: str
     timestamps: TimeStamps
+    time_taken: Optional[float] = None
 
     @computed_field
     def srt(self) -> str:
@@ -54,6 +55,12 @@ class Job(BaseModel):
     status: str
     start_time: Optional[datetime] = None
     transcript: Optional[Transcript] = None
+    # TODO: add a field for 'time_taken' -> returned from api
+
+
+class RunningJob(NamedTuple):
+    call_id: str
+    start_time: int
 
 
 class Settings(BaseSettings):

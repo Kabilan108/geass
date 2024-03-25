@@ -8,6 +8,7 @@ from rich.progress import (
     TextColumn,
     TimeRemainingColumn,
 )
+import pydantic
 import ffmpeg
 import httpx
 
@@ -35,15 +36,17 @@ def status_text(status: str) -> str:
 def get_job_status(job: models.Job, config: models.Settings) -> models.Job:
     with httpx.Client() as client:
         response = client.get(f"{config.service_status_url}/{job.call_id}")
+        res_dict = response.json()
 
     if response.status_code == 200:
-        job.status = response.json()["status"]
-        if job.status == "complete":
-            transcript = response.json()["transcript"]
-            job.transcript = models.Transcript(
-                text=transcript["text"],
-                timestamps=[models.TimeStamp(**c) for c in transcript["timestamps"]],
-            )
+        job.status = res_dict["status"]
+        try:
+            if job.status == "complete":
+                job.transcript = models.Transcript(
+                    time_taken=res_dict["time_taken"], **res_dict["transcript"]
+                )
+        except pydantic.ValidationError as e:
+            raise ValueError(f"Transcript validation error: {e.errors()}")
         config.job_logger.update_job(job)
     else:
         raise ValueError("Error from services API")
