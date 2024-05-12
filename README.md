@@ -5,7 +5,7 @@
 ![Version](https://img.shields.io/badge/version-0.1.0-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue?style=for-the-badge&logo=python)
-![wakapi.dev](https://img.shields.io/badge/wakapi.dev-10%20hrs%2020%20mins-168014?style=for-the-badge&logo=wakatime)
+![wakapi.dev](https://img.shields.io/badge/wakapi.dev-10%20hrs%2021%20mins-168014?style=for-the-badge&logo=wakatime)
 
 ![geass demo](demo.gif)
 
