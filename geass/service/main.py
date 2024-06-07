@@ -69,6 +69,7 @@ def fastapi_app():
         config.DATA_DIR: data_volume,
     },
     secrets=[Secret.from_name("geass-secrets")],
+    timeout=10 * 60,
 )
 def transcribe(audiofile: str) -> dict:
     """Transcribe an audio file
