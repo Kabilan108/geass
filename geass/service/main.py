@@ -47,6 +47,7 @@ whisper_image = (
 
 stub = Stub("geass")
 stub.jobs = Dict.new()
+stub.rate_limit_dict = Dict.new()
 
 
 @stub.function(

@@ -7,6 +7,7 @@ from fastapi import (
     FastAPI,
     HTTPException,
     UploadFile,
+    Request,
     status,
 )
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -25,18 +26,44 @@ MAX_JOB_AGE_SECS = 10 * 60
 app = FastAPI()
 auth_scheme = HTTPBearer()
 
+RATE_LIMIT = int(os.environ["RATE_LIMIT"])
+RATE_LIMIT_WINDOW = int(os.environ["RATE_LIMIT_WINDOW"])
+GEASS_SERVICE_TOKEN = os.environ["GEASS_SERVICE_TOKEN"]
+
 
 class RunningJob(NamedTuple):
     call_id: str
     start_time: int
 
 
+def rate_limit(request: Request):
+    client_ip = request.client.host
+    current_time = int(time.time())
+
+    # get request timestamps for IP
+    requests = stub.rate_limit_dict.get(client_ip, [])
+
+    # remove requests outside of time window
+    requests = [req for req in requests if req > current_time - RATE_LIMIT_WINDOW]
+
+    if len(requests) >= RATE_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded",
+        )
+
+    requests.append(current_time)
+    stub.rate_limit_dict[client_ip] = requests
+
+
 @app.post("/transcribe")
 async def transcribe_job(
     file: UploadFile = File(...),
+    request: Request = Request,
     token: HTTPAuthorizationCredentials = Depends(auth_scheme),
 ):
-    """Start transcription jobs"""
+    """Start transcription job"""
+    rate_limit(request)
 
     path, filename = utils.save_file(file)
     data_volume.commit()
