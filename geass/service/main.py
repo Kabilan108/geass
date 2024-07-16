@@ -64,6 +64,7 @@ def fastapi_app():
 
 @app.function(
     gpu=GPU_CONFIG,
+    concurrency_limit=5,
     image=job_image,
     volumes={
         config.DATA_VOLUME: data_volume,
