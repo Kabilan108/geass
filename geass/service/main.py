@@ -131,13 +131,13 @@ def transcribe(job: Job) -> dict:
     volumes={config.DATA_VOLUME: data_volume},
     schedule=Period(days=7),
 )
-def cleanup_jobs():
+def cleanup_jobs(all_jobs: bool = False):
     """Remove old jobs from the job cache and delete associated audio files"""
     data_volume.reload()
 
     job_count = 0
     for key, job in job_cache.items():
-        if job.age > config.MAX_JOB_AGE:
+        if job.age > config.MAX_JOB_AGE or all_jobs:
             if job.audio_path:
                 path_in_volume = job.audio_path.replace(f"{config.DATA_VOLUME}", "")
                 try:

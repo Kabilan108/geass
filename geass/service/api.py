@@ -14,7 +14,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 import time
 
-from .main import data_volume, transcribe, job_cache, rate_limit_dict
+from .main import data_volume, transcribe, cleanup_jobs, job_cache, rate_limit_dict
 from .config import (
     log,
     RATE_LIMIT,
@@ -173,6 +173,6 @@ async def reset(token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
     """Reset the job cache"""
     verify_token(token, admin_only=True)
 
-    job_cache.clear()
+    cleanup_jobs.spawn(all_jobs=True)
 
     return APIResponse(message="Job cache reset")
