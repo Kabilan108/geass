@@ -1,16 +1,21 @@
 # Author: Tony K. Okeke
 # Date:   03.17.2024
 
-from loguru import logger
-import sys
+import os
 
+from .logger import create_logger
 
-DATA_DIR = "/data"
-MODEL_DIR = "/models"
+log = create_logger(__name__)
+
+GEASS_ADMIN_TOKEN = os.environ.get("GEASS_ADMIN_TOKEN", "")
+GEASS_API_TOKEN = os.environ.get("GEASS_API_TOKEN", "")
+
+RATE_LIMIT = int(os.environ.get("RATE_LIMIT", 100))
+RATE_LIMIT_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW", 60))
+
+MAX_JOB_AGE = int(os.environ.get("MAX_JOB_AGE", 60 * 60 * 24 * 5))  # 5 days
+
+DATA_VOLUME = "/data"
+UPLOADS_DIR = f"{DATA_VOLUME}/uploads"
+MODEL_DIR = f"{DATA_VOLUME}/models"
 WHISPER_MODEL = "openai/whisper-large-v3"
-
-logger.add(
-    sink=sys.stdout,
-    format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
-    level="INFO",
-)

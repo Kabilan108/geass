@@ -12,28 +12,36 @@ from fastapi import (
 )
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from typing import NamedTuple
 import time
-import os
 
-from .main import data_volume, transcribe, stub
-from .config import logger
-from . import utils
+from .main import data_volume, transcribe, job_cache, rate_limit_dict
+from .config import (
+    log,
+    RATE_LIMIT,
+    RATE_LIMIT_WINDOW,
+    GEASS_API_TOKEN,
+    GEASS_ADMIN_TOKEN,
+)
+from .utils import save_file, generate_job_key
+from .models import APIResponse, Job, JobStatus
 
-
-MAX_JOB_AGE_SECS = 10 * 60
 
 app = FastAPI()
 auth_scheme = HTTPBearer()
 
-RATE_LIMIT = int(os.environ["RATE_LIMIT"])
-RATE_LIMIT_WINDOW = int(os.environ["RATE_LIMIT_WINDOW"])
-GEASS_SERVICE_TOKEN = os.environ["GEASS_SERVICE_TOKEN"]
 
+def verify_token(token: HTTPAuthorizationCredentials, admin_only: bool = False):
+    if admin_only:
+        valid_tokens = [GEASS_ADMIN_TOKEN]
+    else:
+        valid_tokens = [GEASS_API_TOKEN, GEASS_ADMIN_TOKEN]
 
-class RunningJob(NamedTuple):
-    call_id: str
-    start_time: int
+    if token.credentials not in valid_tokens:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect bearer token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 def rate_limit(request: Request):
@@ -41,7 +49,7 @@ def rate_limit(request: Request):
     current_time = int(time.time())
 
     # get request timestamps for IP
-    requests = stub.rate_limit_dict.get(client_ip, [])
+    requests = rate_limit_dict.get(client_ip, [])
 
     # remove requests outside of time window
     requests = [req for req in requests if req > current_time - RATE_LIMIT_WINDOW]
@@ -53,7 +61,7 @@ def rate_limit(request: Request):
         )
 
     requests.append(current_time)
-    stub.rate_limit_dict[client_ip] = requests
+    rate_limit_dict[client_ip] = requests
 
 
 @app.post("/transcribe")
@@ -63,72 +71,108 @@ async def transcribe_job(
     token: HTTPAuthorizationCredentials = Depends(auth_scheme),
 ):
     """Start transcription job"""
+    verify_token(token)
     rate_limit(request)
 
-    path, filename = utils.save_file(file)
+    file_content = await file.read()
+    job_key = generate_job_key(file_content)
+    await file.seek(0)
+
+    existing_job = job_cache.get(job_key, None)
+
+    if existing_job:
+        if existing_job.status == JobStatus.completed:
+            log.info("Found completed job %s", existing_job.call_id)
+            return APIResponse(
+                data={
+                    "call_id": existing_job.call_id,
+                    "status": existing_job.status,
+                    "transcript": existing_job.transcript,
+                    "time_taken": existing_job.time_taken,
+                },
+                message="Transcription completed",
+            )
+        elif existing_job.status in [JobStatus.processing, JobStatus.pending]:
+            log.info("Found in-progress job %s", existing_job.call_id)
+            return APIResponse(
+                data={
+                    "call_id": existing_job.call_id,
+                    "status": existing_job.status,
+                },
+                message="Transcription in progress",
+            )
+        elif existing_job.status == JobStatus.failed:
+            log.info("Found failed job %s", existing_job.call_id)
+            job_cache.delete(job_key)
+            pass
+        else:
+            log.error("Unknown job status %s", existing_job.status)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Unknown job status {existing_job.status}",
+            )
+
+    new_job = Job(key=job_key)
+    new_job.audio_path = save_file(file, new_job.call_id)
     data_volume.commit()
 
-    if token.credentials != os.environ["GEASS_SERVICE_TOKEN"]:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect bearer token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    job_cache.put(job_key, new_job)
 
-    now = int(time.time())
-    job_key = f"{filename}-{now}"
+    log.info("Adding job %s to queue", new_job.call_id)
+    transcribe.spawn(job=new_job)
 
-    try:
-        job = stub.jobs[job_key]
-
-        if isinstance(job, RunningJob) and (now - job.start_time) < MAX_JOB_AGE_SECS:
-            call_id = job.call_id
-            logger.info(
-                f"Found existing, unexpired job for {filename}. Returning call_id {call_id}."
-            )
-            return {"call_id": call_id}
-    except KeyError:
-        pass
-
-    call = transcribe.spawn(audiofile=path)
-    stub.jobs[job_key] = RunningJob(
-        call_id=call.object_id,
-        start_time=now,
-    )
-
-    return {"call_id": call.object_id}
+    return {"call_id": new_job.call_id}
 
 
 @app.get("/status/{call_id}")
-async def poll_status(call_id: str):
+async def poll_status(
+    call_id: str, token: HTTPAuthorizationCredentials = Depends(auth_scheme)
+):
     """Check status of a running job"""
+    verify_token(token)
 
-    from modal.functions import FunctionCall
-
-    function_call = FunctionCall.from_id(call_id)
-
-    try:
-        res = function_call.get(timeout=0.1)
-    except TimeoutError:
-        return {"status": "running"}
-    except Exception as exc:
-        if exc.args:
-            inner_exc = exc.args[0]
-            if "HTTPError 403" in inner_exc:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Permission denied on transcription job",
-                )
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unknown error processing job",
+    # look up job in the cache
+    job = next((j for j in job_cache.values() if j.call_id == call_id), None)
+    if not job:
+        return APIResponse(
+            message=f"Job with call_id {call_id} not found",
         )
 
-    logger.info(f"Completed transcription for {call_id}")
-
-    return {
-        "status": "complete",
-        "transcript": res["transcript"],
-        "time_taken": res["time_taken"],
+    response = {
+        "call_id": job.call_id,
+        "status": job.status,
+        "time_taken": job.time_taken,
+        "transcript": job.transcript,
     }
+
+    if job.status == JobStatus.failed:
+        return APIResponse(
+            data=response,
+            error=job.error,
+        )
+    else:
+        return APIResponse(
+            data=response,
+            message="Transcription in progress",
+        )
+
+
+@app.get("/jobs")
+async def list_jobs(token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
+    """List all jobs"""
+    verify_token(token, admin_only=True)
+
+    return APIResponse(
+        data=list(job_cache.values()),
+        message="Retrieved job cache",
+    )
+
+
+@app.get("/reset")
+async def reset(token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
+    """Reset the job cache"""
+    verify_token(token, admin_only=True)
+
+    job_cache.clear()
+
+    return APIResponse(message="Job cache reset")

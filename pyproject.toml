@@ -23,12 +23,13 @@ tqdm = "4.66.2"
 typer = "0.9.0"
 loguru = "^0.7.2"
 html2text = "^2024.2.26"
-transformers = "^4.42.4"
+transformers = "^4.36.2"
 torch = "^2.3.1"
+huggingface-hub = "^0.23.5"
 
 [tool.poetry.scripts]
 geass = "geass.cli.main:app"
 
 [tool.poetry.group.dev.dependencies]
-modal = "0.61.58"
+modal = "0.63.67"
 jupyter = "^1.0.0"
