@@ -2,11 +2,9 @@
 # Date:   03.17.2024
 
 from pydantic import BaseModel, RootModel, computed_field, validator
-from pydantic_settings import BaseSettings
 
-from typing import Any, Generator, NamedTuple, Optional
+from typing import NamedTuple, Optional
 from datetime import datetime
-from pathlib import Path
 from enum import Enum
 
 
@@ -40,7 +38,6 @@ class TimeStamps(RootModel):
 class Transcript(BaseModel):
     text: str
     timestamps: TimeStamps
-    time_taken: Optional[float] = None
 
     @computed_field
     def srt(self) -> str:
@@ -63,46 +60,14 @@ class RunningJob(NamedTuple):
     start_time: int
 
 
-class Settings(BaseSettings):
-    GEASS_SERVICE_API_URL: str
-    GEASS_SERVICE_TOKEN: str
-
-    @computed_field
-    def db_path(self) -> Path:
-        path = Path("~/.geass.db").expanduser().resolve()
-        return path
-
-    @computed_field
-    def service_status_url(self) -> str:
-        return f"{self.GEASS_SERVICE_API_URL}/status"
-
-    @computed_field
-    def transcribe_service_url(self) -> str:
-        return f"{self.GEASS_SERVICE_API_URL}/transcribe"
-
-    @computed_field
-    def service_headers(self) -> dict:
-        return {"Authorization": f"Bearer {self.GEASS_SERVICE_TOKEN}"}
-
-    @computed_field
-    def job_logger(self) -> Any:
-        from .jobs import JobLogger
-
-        return JobLogger(db_path=self.db_path)
-
-
 class TranscriptFormat(str, Enum):
     TEXT = "text"
     JSON = "json"
     SRT = "srt"
 
 
-class GeneratorFile:
-    def __init__(self, generator: Generator):
-        self.generator = generator
-
-    def read(self, size=-1):
-        try:
-            return next(self.generator)
-        except StopIteration:
-            return b""
+class JobStatus(str, Enum):
+    pending = "pending"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"

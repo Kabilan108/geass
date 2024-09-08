@@ -16,7 +16,8 @@ from typing import Generator
 from pathlib import Path
 import os
 
-from . import models
+from .config import Settings
+from .models import Job, Transcript
 
 CONFIG_FILE = Path("~/.geass.json").expanduser()
 
@@ -33,7 +34,7 @@ def status_text(status: str) -> str:
     )
 
 
-def get_job_status(job: models.Job, config: models.Settings) -> models.Job:
+def get_job_status(job: Job, config: Settings) -> Job:
     with httpx.Client() as client:
         response = client.get(f"{config.service_status_url}/{job.call_id}")
         res_dict = response.json()
@@ -42,7 +43,7 @@ def get_job_status(job: models.Job, config: models.Settings) -> models.Job:
         job.status = res_dict["status"]
         try:
             if job.status == "complete":
-                job.transcript = models.Transcript(
+                job.transcript = Transcript(
                     time_taken=res_dict["time_taken"], **res_dict["transcript"]
                 )
         except pydantic.ValidationError as e:
@@ -76,3 +77,29 @@ def upload_file(audio_path: Path) -> Generator[bytes, None, None]:
                     break
                 yield chunk
                 pg.update(task, advance=len(chunk))
+
+
+class GeneratorFile:
+    def __init__(self, generator: Generator):
+        self.generator = generator
+
+    def read(self, size=-1):
+        try:
+            return next(self.generator)
+        except StopIteration:
+            return b""
+
+
+def create_file_generator(audio_path: Path) -> GeneratorFile:
+    return GeneratorFile(upload_file(audio_path))
+
+
+def parse_geass_response(response: httpx.Response) -> dict:
+    res = response.json()
+    data = res.get("data", {})
+    error = res.get("error", "")
+
+    if response.status_code == 200 and not error:
+        return data
+    else:
+        raise Exception(error)

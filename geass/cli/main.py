@@ -11,10 +11,12 @@ from typing import Optional
 from pathlib import Path
 import time
 
-from geass.cli import models, utils
+from geass.cli import models, utils, jobs
+from geass.cli.config import settings
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
-config = models.Settings()
+job_logger = jobs.JobLogger(db_path=settings.db_path)
+
 console = Console()
 error_console = Console(stderr=True)
 
@@ -58,35 +60,40 @@ def transcribe(audio_paths: list[Path], num_threads: int = 4):
         if not audio_paths[i].exists():
             raise typer.BadParameter(f"File '{audio_paths[i]}' does not exist")
 
-    with httpx.Client() as client:
+    with httpx.Client(timeout=10) as client:
         for audio_path in audio_paths:
-            generator = utils.upload_file(audio_path)
             response = client.post(
-                config.transcribe_service_url,
-                headers=config.service_headers,
+                settings.transcribe_service_url,
+                headers=settings.service_headers,
                 files={
                     "file": (
                         audio_path.name,
-                        models.GeneratorFile(generator),
+                        utils.create_file_generator(audio_path),
                         "audio/mpeg",
                     )
                 },
             )
 
-            if response.status_code == 200:
+            try:
+                data = utils.parse_geass_response(response)
                 job = models.Job(
                     name=audio_path.name,
                     file=str(audio_path),
-                    call_id=response.json()["call_id"],
-                    status="running",
+                    call_id=data["call_id"],
+                    status=data["status"],
+                    transcript=data["transcript"],
+                    time_taken=data["time_taken"],
                 )
-                id = config.job_logger.save_job(job)
-                console.print(f"Job {id:03d} started <[cyan]{job.call_id}[/cyan]>")
-            else:
-                error_console.print(
-                    "[red bold]Error:[/red bold] services API call failed"
-                )
-                error_console.print(response.json())
+                id = job_logger.save_job(job)
+
+                if job.status == "completed":
+                    console.print(f"Transcription {id:03d} complete.")
+                else:
+                    console.print(f"Running transcription {id:03d}")
+
+            except Exception as e:
+                error_console.print(f"[red][bold]Error:[/bold] {e}")
+                continue
 
 
 @app.command("list-jobs", help="List all transcription jobs")
@@ -98,9 +105,9 @@ def list_jobs(status: str = None, limit: int = 10, refresh: bool = False):
     table.add_column("Submitted", justify="center")
     table.add_column("Time Taken", justify="center")
 
-    for job in config.job_logger.get_jobs(status=status, limit=limit):
+    for job in job_logger.get_jobs(status=status, limit=limit):
         if refresh and job.status == "running":
-            job = utils.get_job_status(job, config)
+            job = utils.get_job_status(job, settings)
 
         status_text = utils.status_text(job.status)
         if job.transcript is not None and job.transcript.time_taken is not None:
@@ -129,11 +136,11 @@ def list_jobs(status: str = None, limit: int = 10, refresh: bool = False):
 
 @app.command("check-status", help="Get the status of a job")
 def check_status(job_id: int):
-    job = config.job_logger.get_job(job_id)
+    job = job_logger.get_job(job_id)
 
     if job.status == "running":
         try:
-            job = utils.get_job_status(job, config)
+            job = utils.get_job_status(job, settings)
         except ValueError as e:
             error_console.print(f"[red]{e}[/red]")
             return
@@ -154,7 +161,7 @@ def get_transcript(
     sleep: int = 5,
 ):
     try:
-        job = config.job_logger.get_job(job_id)
+        job = job_logger.get_job(job_id)
     except ValueError as e:
         error_console.print(f"[red]{e}[/red]")
         return
@@ -163,7 +170,7 @@ def get_transcript(
         with console.status("[blue]Fetching transcript[/blue]"):
             while True:
                 try:
-                    job = utils.get_job_status(job, config)
+                    job = utils.get_job_status(job, settings)
                 except ValueError:
                     error_console.print("[red]Error getting job status[/red]")
                     return
