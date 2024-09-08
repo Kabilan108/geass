@@ -1,0 +1,5 @@
+add flag to return awk friendly output
+
+fix the occasional read timeout errors when uploading files. account for cold start time
+
+make sure that call ing the status endpoint doesnt load a gpu
