@@ -52,7 +52,6 @@ class Job(BaseModel):
     status: str
     start_time: Optional[datetime] = None
     transcript: Optional[Transcript] = None
-    # TODO: add a field for 'time_taken' -> returned from api
 
 
 class RunningJob(NamedTuple):

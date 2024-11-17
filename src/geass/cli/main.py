@@ -60,7 +60,7 @@ def transcribe(audio_paths: list[Path], num_threads: int = 4):
         if not audio_paths[i].exists():
             raise typer.BadParameter(f"File '{audio_paths[i]}' does not exist")
 
-    with httpx.Client(timeout=10) as client:
+    with httpx.Client(timeout=30) as client:
         for audio_path in audio_paths:
             response = client.post(
                 settings.transcribe_service_url,
@@ -82,7 +82,6 @@ def transcribe(audio_paths: list[Path], num_threads: int = 4):
                     call_id=data["call_id"],
                     status=data["status"],
                     transcript=data["transcript"],
-                    time_taken=data["time_taken"],
                 )
                 id = job_logger.save_job(job)
 
@@ -110,19 +109,19 @@ def list_jobs(status: str = None, limit: int = 10, refresh: bool = False):
             job = utils.get_job_status(job, settings)
 
         status_text = utils.status_text(job.status)
-        if job.transcript is not None and job.transcript.time_taken is not None:
-            time_taken = (
-                f"{time.strftime('%H:%M:%S', time.gmtime(job.transcript.time_taken))}"
-            )
-        else:
-            time_taken = "N/A"
+        # if job.transcript is not None and job.transcript.time_taken is not None:
+        #     time_taken = (
+        #         f"{time.strftime('%H:%M:%S', time.gmtime(job.transcript.time_taken))}"
+        #     )
+        # else:
+        #     time_taken = "N/A"
 
         table.add_row(
             f"[bold cyan]{job.id:03d}[/bold cyan]",
             job.name,
             status_text,
             job.start_time.strftime("%Y-%m-%d %H:%M:%S"),
-            time_taken,
+            # time_taken,
         )
 
     console.print(
@@ -171,8 +170,8 @@ def get_transcript(
             while True:
                 try:
                     job = utils.get_job_status(job, settings)
-                except ValueError:
-                    error_console.print("[red]Error getting job status[/red]")
+                except ValueError as e:
+                    error_console.print(f"[red]Error getting job status:[/red] {e}")
                     return
 
                 if job.status == "complete":

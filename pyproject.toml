@@ -1,6 +1,6 @@
 [project]
 name = "geass"
-version = "0.1.1"
+version = "0.1.2"
 readme = "README.md"
 description = "Command your transcription API with Geass"
 authors = [
@@ -58,3 +58,8 @@ packages = ["src/geass"]
 
 [tool.uv]
 package = true
+
+[dependency-groups]
+dev = [
+    "ipdb>=0.13.13",
+]

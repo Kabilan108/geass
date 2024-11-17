@@ -35,17 +35,16 @@ def status_text(status: str) -> str:
 
 
 def get_job_status(job: Job, config: Settings) -> Job:
-    with httpx.Client() as client:
+    with httpx.Client(
+        headers=httpx.Headers({"Authorization": f"Bearer {config.GEASS_API_TOKEN}"})
+    ) as client:
         response = client.get(f"{config.service_status_url}/{job.call_id}")
-        res_dict = response.json()
-
+        res_data = response.json().get("data")
     if response.status_code == 200:
-        job.status = res_dict["status"]
+        job.status = res_data.get("status")
         try:
-            if job.status == "complete":
-                job.transcript = Transcript(
-                    time_taken=res_dict["time_taken"], **res_dict["transcript"]
-                )
+            if job.status == "completed":
+                job.transcript = Transcript(**res_data["transcript"])
         except pydantic.ValidationError as e:
             raise ValueError(f"Transcript validation error: {e.errors()}")
         config.job_logger.update_job(job)

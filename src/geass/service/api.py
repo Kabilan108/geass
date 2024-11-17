@@ -54,7 +54,7 @@ def rate_limit(request: Request):
     client_ip = request.client.host
     current_time = int(time.time())
 
-    # get request timestamps for IP
+    # get request timestamps for I
     requests = rate_limit_dict.get(client_ip, [])
 
     # remove requests outside of time window

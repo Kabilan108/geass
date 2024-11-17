@@ -3,3 +3,9 @@ add flag to return awk friendly output
 fix the occasional read timeout errors when uploading files. account for cold start time
 
 make sure that call ing the status endpoint doesnt load a gpu
+
+
+figure out how to handle API starts with the modal endpoint. in some cases, when a file is uploaded, it hangs (seemingly because of spin up times), and times out.
+when the cli is called, show usage string
+
+try to figure out if the modal function can be run as an epheeral job via the cli -> consolidate code to cli library that can uptionally run loally
