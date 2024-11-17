@@ -14,16 +14,22 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 import time
 
-from .main import data_volume, transcribe, cleanup_jobs, job_cache, rate_limit_dict
-from .config import (
+from geass.service.main import (
+    data_volume,
+    transcribe,
+    cleanup_jobs,
+    job_cache,
+    rate_limit_dict,
+)
+from geass.service.config import (
     log,
     RATE_LIMIT,
     RATE_LIMIT_WINDOW,
     GEASS_API_TOKEN,
     GEASS_ADMIN_TOKEN,
 )
-from .utils import save_file, generate_job_key
-from .models import APIResponse, Job, JobStatus
+from geass.service.utils import save_file, generate_job_key
+from geass.service.schema import APIResponse, Job, JobStatus
 
 
 app = FastAPI()

@@ -35,6 +35,9 @@ test = [
     "pytest>=8.3.3",
 ]
 
+[project.scripts]
+geass = "geass.cli.main:app"
+
 [project.urls]
 Homepage = "https://github.com/Kabilan108/geass"
 
@@ -49,9 +52,9 @@ packages = ["src/geass"]
 "src" = ""
 
 [tool.hatch.build.targets.sdist]
-exclude = [
-    "/src/geass/service",
-]
+# exclude = [
+#     "/src/geass/service",
+# ]
 
 [tool.uv]
 package = true
