@@ -22,17 +22,8 @@ dependencies = [
     "transformers==4.46.1",
     "torch==2.3.1",
     "huggingface-hub==0.23.5",
-    "modal>=0.65.5",
     "logfire>=2.1.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "ipython-icat>=0.2.2",
-    "ipython>=8.18.1",
-]
-test = [
-    "pytest>=8.3.3",
+    "modal>=0.73.92",
 ]
 
 [project.scripts]
@@ -51,15 +42,14 @@ packages = ["src/geass"]
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""
 
-[tool.hatch.build.targets.sdist]
-# exclude = [
-#     "/src/geass/service",
-# ]
-
 [tool.uv]
 package = true
 
 [dependency-groups]
 dev = [
+    "ipython-icat>=0.2.2",
     "ipdb>=0.13.13",
+]
+test = [
+    "pytest>=8.3.3",
 ]
