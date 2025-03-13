@@ -6,15 +6,22 @@ from pydantic import BaseModel, Field, computed_field, field_serializer
 
 
 class Format(StrEnum):
-    TEXT = "text"
     JSON = "json"
+    TEXT = "text"
+    SRT = "srt"
 
 
 class Segment(BaseModel):
     start: float
     end: float
     text: str
-    no_speech_prob: float
+    no_speech_prob: float | None = None
+
+    @computed_field
+    @property
+    def srt(self) -> str:
+        f = format_srt_ts
+        return f"{f(self.start)} --> {f(self.end)}\n{self.text.strip()}\n"
 
 
 class Transcript(BaseModel):
@@ -35,6 +42,11 @@ class Transcript(BaseModel):
 
     @computed_field
     @property
+    def srt(self) -> str:
+        return "\n".join(s.srt for s in self.segments).strip()
+
+    @computed_field
+    @property
     def wall_time(self) -> str:
         return format_duration(self.end_time - self.start_time)
 
@@ -50,3 +62,11 @@ def format_duration(sec: float | None) -> str:
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
     else:
         return f"{minutes:02d}:{seconds:02d}"
+
+
+def format_srt_ts(timestamp):
+    milliseconds = int((timestamp % 1) * 1000)
+    seconds = int(timestamp % 60)
+    minutes = int((timestamp // 60) % 60)
+    hours = int(timestamp // 3600)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"

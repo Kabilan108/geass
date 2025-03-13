@@ -86,6 +86,13 @@ def transcribe(
         "-r",
         help="transcribe audio file using remote server",
     ),
+    interval: float | None = typer.Option(
+        None,
+        "--interval",
+        "-i",
+        help="if provided, transcript segments will be aggregated into larger `interval` sec long segments.",
+        callback=lambda v: defaults_callback("interval", v),
+    ),
 ):
     if model_name not in models:
         raise typer.BadParameter(
@@ -105,20 +112,22 @@ def transcribe(
 
         if to_transcribe:
             if remote:
-                transcripts = run_remote_transcription(to_transcribe, model_name)
+                results = run_remote_transcription(to_transcribe, model_name, interval)
+                if save:
+                    transcripts = [save_transcription(t) for t in results]
 
             else:
                 with whisper_context(model_name, len(to_transcribe)) as (model, adv):
                     for audio_file in to_transcribe:
                         transcript = transcribe_audio(
-                            model=model, audio_file=audio_file
+                            model=model, audio_file=audio_file, interval=interval
                         )
                         if save:
                             transcript = save_transcription(transcript)
                         transcripts.append(transcript)
                         adv()
 
-        print_results(transcripts, fmt=fmt, pager_len=pager_len)
+        print_results(transcripts, fmt=fmt, pager_len=pager_len, interval=interval)
     except Exception as e:
         err_cns.print(f"Unexpected error: {e}")
         raise typer.Exit(code=1)

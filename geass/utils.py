@@ -95,24 +95,25 @@ def whisper_context(name: str, n: int):
 def transcribe_audio(
     audio_file: Path,
     model,
+    interval: float | None,
 ) -> Transcript:
     """Transcribe audio data using WhisperModel."""
     buffer = io.BytesIO(audio_file.read_bytes())
     tic = time()
-    segments, _ = model.transcribe(buffer)
+    results, _ = model.transcribe(buffer)
     return Transcript(
         duration=get_audio_duration(audio_file),
         file_path=audio_file,
-        segments=[Segment(**asdict(s)) for s in segments],
+        segments=[Segment(**asdict(s)) for s in results],
         start_time=tic,
     )
 
 
-def print_transcripts_text(ts: list[Transcript]) -> None:
+def print_transcripts_text(ts: list[Transcript], srt: bool = False) -> None:
     for t in ts:
         cns.print(f"""\
 <transcript file_name='{t.file_path.name}' duration='{t.duration}' wall_time='{t.wall_time}'>
-{t.text}
+{t.srt if srt else t.text}
 </transcript>
 """)
 
@@ -122,17 +123,49 @@ def print_transcripts_json(ts: list[Transcript]) -> None:
         cns.print_json(t.model_dump_json())
 
 
-def print_results(transcripts: list[Transcript], fmt: Format, pager_len: int):
+def print_results(
+    transcripts: list[Transcript], fmt: Format, pager_len: int, interval: float | None
+):
     """Print the results of the transcription."""
 
+    if interval is not None:
+        for t in transcripts:
+            t.segments = aggregate_segments(t.segments, interval)
+
     def _print_results():
-        if fmt == Format.TEXT:
-            print_transcripts_text(transcripts)
-        elif fmt == Format.JSON:
+        if fmt == Format.JSON:
             print_transcripts_json(transcripts)
+        elif fmt == Format.TEXT:
+            print_transcripts_text(transcripts)
+        elif fmt == Format.SRT:
+            print_transcripts_text(transcripts, True)
 
     if any(len(t.text) > pager_len for t in transcripts):
         with cns.pager():
             _print_results()
     else:
         _print_results()
+
+
+def aggregate_segments(segments: list[Segment], interval: float) -> list[Segment]:
+    """Aggregate segments into larger segments based on a time interval.
+
+    Args:
+        segments (list[Segment]): List of segments to aggregate.
+        interval (int): Time interval in seconds to aggregate segments.
+
+    Returns:
+        list[Segment]: Aggregated list of segments.
+    """
+    ss = sorted(segments, key=lambda s: s.start)
+    nss: list[Segment] = [ss[0]]
+    i = 0
+    for s in ss[1:]:
+        if s.end - nss[i].start < interval:
+            nss[i].end = s.end
+            nss[i].text += s.text
+            continue
+        nss[i].no_speech_prob = None
+        nss.append(s)
+        i += 1
+    return nss

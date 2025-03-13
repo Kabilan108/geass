@@ -70,5 +70,4 @@ def run_remote_transcription(audio_paths: list[Path], model_name: str) -> Transc
     with modal.enable_output():
         with app.run():
             results = transcribe_audio_files.remote(requests, model_name)
-            transcripts = [Transcript(**r) for r in results]
-            return transcripts
+            return [Transcript(**r) for r in results]
