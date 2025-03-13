@@ -10,7 +10,9 @@ from geass.models import Segment, Transcript
 from geass.utils import get_audio_duration
 
 # TODO: add a mount to store the model so it doesn't need to be re-downloaded every time
+# Issue URL: https://github.com/Kabilan108/geass/issues/2
 # TODO: implement a way to spawn multiple containers to run transciption in parallel
+# Issue URL: https://github.com/Kabilan108/geass/issues/1
 
 cuda_image = "nvidia/cuda:12.6.0-cudnn-runtime-ubuntu22.04"
 image = modal.Image.from_registry(cuda_image, add_python="3.12").pip_install(
