@@ -8,8 +8,9 @@ from geass.db import (
     save_transcription,
     update_default,
 )
+from geass.models import Format
+from geass.remote import run_remote_transcription
 from geass.utils import (
-    Format,
     cns,
     err_cns,
     list_available_models,
@@ -79,6 +80,12 @@ def transcribe(
         "-s",
         help="save the transcript to a file",
     ),
+    remote: bool = typer.Option(
+        False,
+        "--remote",
+        "-r",
+        help="transcribe audio file using remote server",
+    ),
 ):
     if model_name not in models:
         raise typer.BadParameter(
@@ -97,16 +104,22 @@ def transcribe(
                 to_transcribe.append(audio_file)
 
         if to_transcribe:
-            with whisper_context(model_name, len(to_transcribe)) as (
-                model,
-                advance,
-            ):
-                for audio_file in to_transcribe:
-                    transcript = transcribe_audio(model=model, audio_file=audio_file)
-                    if save:
-                        transcript = save_transcription(transcript)
-                    transcripts.append(transcript)
-                    advance()
+            if remote:
+                transcripts = run_remote_transcription(to_transcribe, model_name)
+
+            else:
+                with whisper_context(model_name, len(to_transcribe)) as (
+                    model,
+                    advance,
+                ):
+                    for audio_file in to_transcribe:
+                        transcript = transcribe_audio(
+                            model=model, audio_file=audio_file
+                        )
+                        if save:
+                            transcript = save_transcription(transcript)
+                        transcripts.append(transcript)
+                        advance()
 
         print_results(transcripts, fmt=fmt, pager_len=pager_len)
     except Exception as e:
