@@ -108,10 +108,7 @@ def transcribe(
                 transcripts = run_remote_transcription(to_transcribe, model_name)
 
             else:
-                with whisper_context(model_name, len(to_transcribe)) as (
-                    model,
-                    advance,
-                ):
+                with whisper_context(model_name, len(to_transcribe)) as (model, adv):
                     for audio_file in to_transcribe:
                         transcript = transcribe_audio(
                             model=model, audio_file=audio_file
@@ -119,7 +116,7 @@ def transcribe(
                         if save:
                             transcript = save_transcription(transcript)
                         transcripts.append(transcript)
-                        advance()
+                        adv()
 
         print_results(transcripts, fmt=fmt, pager_len=pager_len)
     except Exception as e:

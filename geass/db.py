@@ -20,6 +20,7 @@ def create_tables():
     if not transcripts_t.exists():
         transcripts_t.create(
             id=int,
+            duration=str,
             file_path=str,
             start_time=float,
             end_time=float,
@@ -79,6 +80,7 @@ def get_cached_transcript(file_path: Path) -> Transcript | None:
         ]
 
         return Transcript(
+            duration=transcript_row["duration"],
             file_path=Path(transcript_row["file_path"]),
             segments=segments,
             start_time=transcript_row["start_time"],
@@ -91,6 +93,7 @@ def get_cached_transcript(file_path: Path) -> Transcript | None:
 def _save_transcript(t: Transcript) -> int:
     """Save a transcript and return its ID"""
     transcript_dict = {
+        "duration": t.duration,
         "file_path": str(t.file_path),
         "start_time": t.start_time,
         "end_time": t.end_time,

@@ -23,10 +23,11 @@ err_cns = Console(stderr=True, style="red")
 def get_audio_duration(path: Path) -> float | None:
     try:
         audio = File(path)
-        return format_duration(audio.info.length if audio.info else None)
+        length = audio.info.length if audio.info else None
     except Exception as e:
         err_cns.print(f"[yellow]Warning: failed to check duration for {path}: {e}")
-        return None
+        length = None
+    return format_duration(length)
 
 
 def list_available_models() -> list[str]:
