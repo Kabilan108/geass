@@ -34,7 +34,13 @@ image = (
 )
 
 
-def create_modal_app(gpu: GPU = GPU.A100):
+class Request(BaseModel):
+    path: Path
+    bytes: bytes
+    duration: str
+
+
+def create_modal_app(model_name: str, gpu: GPU = GPU.A100):
     app = modal.App("geass-cli")
 
     @app.function(
@@ -43,27 +49,23 @@ def create_modal_app(gpu: GPU = GPU.A100):
         serialized=True,
         volumes={"/models": modal.Volume.from_name("geass-models")},
     )
-    def transcribe_audio_files(requests: list[Request], model_name: str) -> list[dict]:
+    def transcribe_audio_file(request: Request) -> dict:
+        """Process a single audio file"""
         from faster_whisper import WhisperModel
 
-        transcripts = []
-        for r in requests:
-            tic = time()
-            buffer = BytesIO(r.bytes)
-            model = WhisperModel(model_name)
-            segments, _ = model.transcribe(buffer)
-            transcripts.append(
-                Transcript(
-                    duration=r.duration,
-                    file_path=r.path,
-                    segments=[Segment(**asdict(s)) for s in segments],
-                    start_time=tic,
-                ).model_dump()
-            )
+        tic = time()
+        buffer = BytesIO(request.bytes)
+        model = WhisperModel(model_name)
+        segments, _ = model.transcribe(buffer)
 
-        return transcripts
+        return Transcript(
+            duration=request.duration,
+            file_path=request.path,
+            segments=[Segment(**asdict(s)) for s in segments],
+            start_time=tic,
+        ).model_dump()
 
-    def run_transcription(audio_paths: list[Path], model_name: str) -> Transcript:
+    def run_transcription(audio_paths: list[Path]) -> Transcript:
         def prepare_request(audio_path: Path) -> Request:
             with open(audio_path, "rb") as f:
                 audio_bytes = f.read()
@@ -72,21 +74,9 @@ def create_modal_app(gpu: GPU = GPU.A100):
 
         requests = list(map(prepare_request, audio_paths))
 
-        with modal.enable_output():
-            with app.run():
-                results = transcribe_audio_files.remote(requests, model_name)
-                return [Transcript(**r) for r in results]
+        with app.run():
+            results = transcribe_audio_file.map(requests)
+            # results = transcribe_audio_files.remote(requests, model_name)
+            return [Transcript(**r) for r in results]
 
     return run_transcription
-
-
-class Request(BaseModel):
-    path: Path
-    bytes: bytes
-    duration: str
-
-
-def run_remote_transcription(
-    audio_paths: list[Path], model_name: str, gpu: GPU
-) -> Transcript:
-    return create_modal_app(gpu)(audio_paths, model_name)

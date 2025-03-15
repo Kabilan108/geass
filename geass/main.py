@@ -9,7 +9,6 @@ from geass.db import (
     update_default,
 )
 from geass.models import GPU, Format
-from geass.remote import run_remote_transcription
 from geass.utils import (
     cns,
     err_cns,
@@ -118,7 +117,10 @@ def transcribe(
 
         if to_transcribe:
             if remote:
-                results = run_remote_transcription(to_transcribe, model_name, gpu)
+                from geass.remote import create_modal_app
+
+                run_transcription = create_modal_app(model_name, gpu)
+                results = run_transcription(to_transcribe)
                 if save:
                     transcripts.extend([save_transcription(t) for t in results])
                 else:
