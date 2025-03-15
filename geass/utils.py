@@ -1,4 +1,5 @@
 import io
+import json
 from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import Path
@@ -119,8 +120,8 @@ def print_transcripts_text(ts: list[Transcript], srt: bool = False) -> None:
 
 
 def print_transcripts_json(ts: list[Transcript]) -> None:
-    for t in ts:
-        cns.print_json(t.model_dump_json())
+    json_list = [t.model_dump() for t in ts]
+    cns.print_json(json.dumps(json_list, indent=2))
 
 
 def print_results(

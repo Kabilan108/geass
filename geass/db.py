@@ -119,16 +119,19 @@ def _save_segments(transcript_id: int, segments: list[Segment]) -> None:
 
 def save_transcription(t: Transcript) -> Transcript:
     """Save complete transcription and return transcript with ID"""
-    transcript_id = _save_transcript(t)
-    _save_segments(transcript_id, t.segments)
+    try:
+        transcript_id = _save_transcript(t)
+        _save_segments(transcript_id, t.segments)
 
-    file_hash = _get_file_hash(t.file_path)
-    cache_t.insert(
-        {
-            "file_hash": file_hash,
-            "transcript_id": transcript_id,
-        }
-    )
+        file_hash = _get_file_hash(t.file_path)
+        cache_t.insert(
+            {
+                "file_hash": file_hash,
+                "transcript_id": transcript_id,
+            }
+        )
+    except Exception as e:
+        print(f"Error saving transcription: {e}")
 
     return t
 
