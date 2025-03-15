@@ -8,7 +8,7 @@ from geass.db import (
     save_transcription,
     update_default,
 )
-from geass.models import Format
+from geass.models import GPU, Format
 from geass.remote import run_remote_transcription
 from geass.utils import (
     cns,
@@ -86,6 +86,12 @@ def transcribe(
         "-r",
         help="transcribe audio file using remote server",
     ),
+    gpu: GPU = typer.Option(
+        GPU.A100,
+        "--gpu",
+        "-g",
+        help="GPU to use for remote transcription",
+    ),
     interval: float | None = typer.Option(
         None,
         "--interval",
@@ -112,15 +118,17 @@ def transcribe(
 
         if to_transcribe:
             if remote:
-                results = run_remote_transcription(to_transcribe, model_name, interval)
+                results = run_remote_transcription(to_transcribe, model_name, gpu)
                 if save:
-                    transcripts = [save_transcription(t) for t in results]
+                    transcripts.extend([save_transcription(t) for t in results])
+                else:
+                    transcripts.extend(results)
 
             else:
                 with whisper_context(model_name, len(to_transcribe)) as (model, adv):
                     for audio_file in to_transcribe:
                         transcript = transcribe_audio(
-                            model=model, audio_file=audio_file, interval=interval
+                            model=model, audio_file=audio_file
                         )
                         if save:
                             transcript = save_transcription(transcript)

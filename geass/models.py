@@ -5,6 +5,14 @@ from time import time
 from pydantic import BaseModel, Field, computed_field, field_serializer
 
 
+class GPU(StrEnum):
+    T4 = "T4"
+    L4 = "L4"
+    A10G = "A10G"
+    A100 = "A100"
+    H100 = "H100"
+
+
 class Format(StrEnum):
     JSON = "json"
     TEXT = "text"

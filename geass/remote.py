@@ -6,7 +6,7 @@ from time import time
 import modal
 from pydantic import BaseModel
 
-from geass.models import Segment, Transcript
+from geass.models import GPU, Segment, Transcript
 from geass.utils import get_audio_duration
 
 # TODO: add a mount to store the model so it doesn't need to be re-downloaded every time
@@ -30,9 +30,54 @@ image = (
         "torch>=2.6.0",
     )
     .env({"HF_HOME": "/models"})
+    .add_local_python_source("geass")
 )
 
-app = modal.App("geass-cli")
+
+def create_modal_app(gpu: GPU = GPU.A100):
+    app = modal.App("geass-cli")
+
+    @app.function(
+        gpu=gpu.value,
+        image=image,
+        serialized=True,
+        volumes={"/models": modal.Volume.from_name("geass-models")},
+    )
+    def transcribe_audio_files(requests: list[Request], model_name: str) -> list[dict]:
+        from faster_whisper import WhisperModel
+
+        transcripts = []
+        for r in requests:
+            tic = time()
+            buffer = BytesIO(r.bytes)
+            model = WhisperModel(model_name)
+            segments, _ = model.transcribe(buffer)
+            transcripts.append(
+                Transcript(
+                    duration=r.duration,
+                    file_path=r.path,
+                    segments=[Segment(**asdict(s)) for s in segments],
+                    start_time=tic,
+                ).model_dump()
+            )
+
+        return transcripts
+
+    def run_transcription(audio_paths: list[Path], model_name: str) -> Transcript:
+        def prepare_request(audio_path: Path) -> Request:
+            with open(audio_path, "rb") as f:
+                audio_bytes = f.read()
+            duration = get_audio_duration(audio_path)
+            return Request(path=audio_path, bytes=audio_bytes, duration=duration)
+
+        requests = list(map(prepare_request, audio_paths))
+
+        with modal.enable_output():
+            with app.run():
+                results = transcribe_audio_files.remote(requests, model_name)
+                return [Transcript(**r) for r in results]
+
+    return run_transcription
 
 
 class Request(BaseModel):
@@ -41,40 +86,7 @@ class Request(BaseModel):
     duration: str
 
 
-@app.function(
-    gpu="A100", image=image, volumes={"/my_vol": modal.Volume.from_name("geass-models")}
-)
-def transcribe_audio_files(requests: list[Request], model_name: str) -> list[dict]:
-    from faster_whisper import WhisperModel
-
-    transcripts = []
-    for r in requests:
-        tic = time()
-        buffer = BytesIO(r.bytes)
-        model = WhisperModel(model_name)
-        segments, _ = model.transcribe(buffer)
-        transcripts.append(
-            Transcript(
-                duration=r.duration,
-                file_path=r.path,
-                segments=[Segment(**asdict(s)) for s in segments],
-                start_time=tic,
-            ).model_dump()
-        )
-
-    return transcripts
-
-
-def run_remote_transcription(audio_paths: list[Path], model_name: str) -> Transcript:
-    def prepare_request(audio_path: Path) -> Request:
-        with open(audio_path, "rb") as f:
-            audio_bytes = f.read()
-        duration = get_audio_duration(audio_path)
-        return Request(path=audio_path, bytes=audio_bytes, duration=duration)
-
-    requests = list(map(prepare_request, audio_paths))
-
-    with modal.enable_output():
-        with app.run():
-            results = transcribe_audio_files.remote(requests, model_name)
-            return [Transcript(**r) for r in results]
+def run_remote_transcription(
+    audio_paths: list[Path], model_name: str, gpu: GPU
+) -> Transcript:
+    return create_modal_app(gpu)(audio_paths, model_name)
