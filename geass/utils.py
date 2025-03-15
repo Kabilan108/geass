@@ -123,9 +123,7 @@ def print_transcripts_json(ts: list[Transcript]) -> None:
     cns.print_json(json.dumps(json_list, indent=2))
 
 
-def print_results(
-    transcripts: list[Transcript], fmt: Format, pager_len: int, interval: float | None
-):
+def print_results(transcripts: list[Transcript], fmt: Format, interval: float | None):
     """Print the results of the transcription."""
 
     if interval is not None:
@@ -140,11 +138,7 @@ def print_results(
         elif fmt == Format.SRT:
             print_transcripts_text(transcripts, True)
 
-    if any(len(t.text) > pager_len for t in transcripts):
-        with cns.pager():
-            _print_results()
-    else:
-        _print_results()
+    _print_results()
 
 
 def aggregate_segments(segments: list[Segment], interval: float) -> list[Segment]:

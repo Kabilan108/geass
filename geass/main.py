@@ -66,12 +66,11 @@ def transcribe(
         help="transcription model to use. run `geass list-models` to see available models.",
         callback=lambda v: defaults_callback("model_name", v),
     ),
-    pager_len: int = typer.Option(
-        DEFAULTS["pager_len"],
-        "--pager-len",
+    use_pager: bool = typer.Option(
+        False,
+        "--page",
         "-p",
-        help="length of text to display before switching to pager mode",
-        callback=lambda v: defaults_callback("pager_len", v),
+        help="whether to use a pager to display the results",
     ),
     save: bool = typer.Option(
         False,
@@ -137,7 +136,12 @@ def transcribe(
                         transcripts.append(transcript)
                         adv()
 
-        print_results(transcripts, fmt=fmt, pager_len=pager_len, interval=interval)
+        if use_pager:
+            with cns.pager():
+                print_results(transcripts, fmt=fmt, interval=interval)
+        else:
+            print_results(transcripts, fmt=fmt, interval=interval)
+
     except Exception as e:
         err_cns.print(f"Unexpected error: {e}")
         raise typer.Exit(code=1)

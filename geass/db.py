@@ -42,7 +42,6 @@ def create_tables():
     if not defaults_t.exists():
         defaults_t.create(id=int, key=str, value=str, pk="id")
         defaults_t.insert({"key": "model_name", "value": "base"})
-        defaults_t.insert({"key": "pager_len", "value": "3000"})
         defaults_t.insert({"key": "interval", "value": None})
 
     if not cache_t.exists():
@@ -159,6 +158,5 @@ create_tables()
 
 DEFAULTS = {
     "model_name": get_default("model_name") or "base",
-    "pager_len": int(get_default("pager_len") or "3000"),
     "interval": get_default("interval") or None,
 }
