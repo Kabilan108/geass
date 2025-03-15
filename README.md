@@ -3,8 +3,8 @@
 CLI tool for audio transcription using `faster-whisper`. Supports local and remote
 transcription (via [Modal](https://modal.com)), caching, and multiple output formats.
 
-![PyPI](https://img.shields.io/pypi/v/geass.svg)
-![License](https://img.shields.io/badge/license-MIT-blue)
+![PyPI](https://img.shields.io/pypi/v/geass)
+![License](https://img.shields.io/pypi/l/geass)
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue?logo=python)
 ![wakapi.dev](https://wakapi.dev/api/badge/Kabilan108/interval:any/project:geass)
 

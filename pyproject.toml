@@ -2,6 +2,7 @@
 name = "geass"
 version = "0.2.0"
 readme = "README.md"
+license = "MIT"
 description = "Opinionated CLI for generating transcripts to use with LLMs"
 authors = [
     { name = "Tony Kabilan Okeke", email = "tonykabilanokeke@gmail.com" }
