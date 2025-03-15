@@ -96,7 +96,6 @@ def whisper_context(name: str, n: int):
 def transcribe_audio(
     audio_file: Path,
     model,
-    interval: float | None,
 ) -> Transcript:
     """Transcribe audio data using WhisperModel."""
     buffer = io.BytesIO(audio_file.read_bytes())

@@ -15,16 +15,21 @@ from geass.utils import get_audio_duration
 # Issue URL: https://github.com/Kabilan108/geass/issues/1
 
 cuda_image = "nvidia/cuda:12.6.0-cudnn-runtime-ubuntu22.04"
-image = modal.Image.from_registry(cuda_image, add_python="3.12").pip_install(
-    "ffmpeg-python==0.2.0",
-    "pydantic==2.6.4",
-    "rich==13.7.1",
-    "modal>=0.73.92",
-    "fastlite>=0.1.2",
-    "faster-whisper>=1.1.1",
-    "typer>=0.15.0",
-    "mutagen>=1.47.0",
-    "torch>=2.6.0",
+models_volume = modal.Volume.from_name("geass-models")
+image = (
+    modal.Image.from_registry(cuda_image, add_python="3.12")
+    .pip_install(
+        "ffmpeg-python==0.2.0",
+        "pydantic==2.6.4",
+        "rich==13.7.1",
+        "modal>=0.73.92",
+        "fastlite>=0.1.2",
+        "faster-whisper>=1.1.1",
+        "typer>=0.15.0",
+        "mutagen>=1.47.0",
+        "torch>=2.6.0",
+    )
+    .env({"HF_HOME": "/models"})
 )
 
 app = modal.App("geass-cli")
@@ -36,7 +41,9 @@ class Request(BaseModel):
     duration: str
 
 
-@app.function(gpu="A100", image=image)
+@app.function(
+    gpu="A100", image=image, volumes={"/my_vol": modal.Volume.from_name("geass-models")}
+)
 def transcribe_audio_files(requests: list[Request], model_name: str) -> list[dict]:
     from faster_whisper import WhisperModel
 
